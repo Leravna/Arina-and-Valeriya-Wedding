@@ -1,0 +1,8 @@
+{
+  "name": "Ethereal Union - Wedding Invitation",
+  "description": "A visually stunning, interactive wedding invitation template featuring an AI Concierge to answer guest inquiries.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
