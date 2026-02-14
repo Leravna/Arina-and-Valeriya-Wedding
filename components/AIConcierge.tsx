@@ -1,16 +1,27 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { geminiService } from '../services/geminiService';
-import { ChatMessage } from '../types';
+import { ChatMessage, Language } from '../types';
+import { WEDDING_DATA } from '../constants';
 
-const AIConcierge: React.FC = () => {
+interface AIConciergeProps {
+  lang: Language;
+}
+
+const AIConcierge: React.FC<AIConciergeProps> = ({ lang }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', text: "Hello! I'm your wedding concierge. Ask me anything about Evelyn & Alexander's special day!" }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const greeting = lang === 'en' 
+      ? `Hello! I'm your wedding concierge. Ask me anything about ${WEDDING_DATA.en.coupleNames}'s special day in Montenegro!`
+      : `Привет! Я ваш свадебный консьерж. Спрашивайте меня о чем угодно в преддверии свадьбы ${WEDDING_DATA.ru.coupleNames} в Черногории!`;
+    
+    setMessages([{ role: 'model', text: greeting }]);
+  }, [lang]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -26,7 +37,7 @@ const AIConcierge: React.FC = () => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
-    const response = await geminiService.sendMessage(userMsg);
+    const response = await geminiService.sendMessage(userMsg, lang);
     
     setIsTyping(false);
     setMessages(prev => [...prev, { role: 'model', text: response }]);
@@ -34,7 +45,6 @@ const AIConcierge: React.FC = () => {
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {/* Floating Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="w-16 h-16 bg-stone-900 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform duration-300 relative group"
@@ -42,23 +52,22 @@ const AIConcierge: React.FC = () => {
         {isOpen ? (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
         ) : (
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a.5.5 0 01-1 0V5a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h3a.5.5 0 010 1H4a2 2 0 01-2-2V5zm12.933 10.23a.75.75 0 10-1.06-1.06l-2.622 2.621V12.75a.75.75 0 00-1.5 0v4.04l-2.621-2.622a.75.75 0 10-1.06 1.06l3.9 3.9a.75.75 0 001.06 0l3.9-3.9z" /><path d="M10 2a1 1 0 011 1v1.323l.395-.396a.75.75 0 111.06 1.06l-1.455 1.456V8a1 1 0 01-2 0V6.443L7.545 4.987a.75.75 0 111.06-1.06l.395.396V3a1 1 0 011-1z" /></svg>
+          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a.5.5 0 01-1 0V5a1 1 0 00-1-1H4a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h3a.5.5 0 010 1H4a2 2 0 01-2-2V5zm12.933 10.23a.75.75 0 10-1.06-1.06l-2.622 2.621V12.75a.75.75 0 00-1.5 0v4.04l-2.621-2.622a.75.75 0 10-1.06 1.06l3.9 3.9a.75.75 0 001.06 0l3.9-3.9z" /><path d="M10 2a1 1 0 011 1v1.323l.395-.396a.75.75 0 111.06 1.06l-1.455 1.456V8a1 1 0 01-2 0V6.443L7.545 4.987a.75.75 0 111.06-1.06l.395.396V3a1 1 0 011-1z" /></svg>
         )}
         {!isOpen && (
-          <div className="absolute -top-12 right-0 bg-white text-stone-900 text-xs py-2 px-4 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-stone-100 italic">
-            Questions? Ask me!
+          <div className="absolute -top-12 right-0 bg-white text-stone-900 text-xs py-2 px-4 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-stone-100 font-titles">
+            {lang === 'en' ? 'Questions? Ask me!' : 'Есть вопросы? Спроси меня!'}
           </div>
         )}
       </button>
 
-      {/* Chat Window */}
       {isOpen && (
         <div className="absolute bottom-20 right-0 w-80 md:w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col border border-stone-200 overflow-hidden animate-slide-up">
           <div className="bg-stone-900 p-4 text-white flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center text-xs italic">AI</div>
             <div>
-              <h3 className="text-sm font-serif italic">Wedding Concierge</h3>
-              <p className="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Always here to help</p>
+              <h3 className="text-sm font-titles">{lang === 'en' ? 'Wedding Concierge' : 'Свадебный Консьерж'}</h3>
+              <p className="text-[10px] text-stone-400 uppercase tracking-widest font-titles">{lang === 'en' ? 'Always here to help' : 'Всегда готов помочь'}</p>
             </div>
           </div>
 
@@ -99,7 +108,7 @@ const AIConcierge: React.FC = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about dress code, locations..."
+                placeholder={lang === 'en' ? "Ask about dress code, locations..." : "Спроси про дресс-код, локации..."}
                 className="flex-1 border border-stone-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-stone-400 font-light"
               />
               <button 

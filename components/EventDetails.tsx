@@ -1,81 +1,60 @@
 
 import React from 'react';
-import { WEDDING_DATA } from '../constants';
+import { WEDDING_DATA, UI_TRANSLATIONS } from '../constants';
+import { Language } from '../types';
 
-const EventDetails: React.FC = () => {
+interface EventDetailsProps {
+  onDressCodeClick: () => void;
+  lang: Language;
+}
+
+const EventDetails: React.FC<EventDetailsProps> = ({ onDressCodeClick, lang }) => {
+  const data = WEDDING_DATA[lang];
+  const t = UI_TRANSLATIONS[lang];
+
   return (
-    <section className="py-24 bg-stone-100 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-serif mb-4 italic">The Celebration</h2>
-          <div className="h-px w-20 bg-stone-300 mx-auto" />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-16">
-          {/* Ceremony & Reception */}
-          <div className="space-y-12">
-            <div className="border-l-2 border-stone-300 pl-8">
-              <h3 className="text-2xl font-serif mb-2">The Ceremony</h3>
-              <p className="text-stone-500 mb-1">{WEDDING_DATA.time}</p>
-              <p className="font-medium text-stone-800">{WEDDING_DATA.location}</p>
-              <p className="text-stone-500 italic text-sm">{WEDDING_DATA.address}</p>
-            </div>
-            
-            <div className="border-l-2 border-stone-300 pl-8">
-              <h3 className="text-2xl font-serif mb-2">The Reception</h3>
-              <p className="text-stone-500 mb-1">6:30 PM</p>
-              <p className="font-medium text-stone-800">{WEDDING_DATA.receptionLocation}</p>
-              <p className="text-stone-500 italic text-sm">{WEDDING_DATA.receptionAddress}</p>
-            </div>
-
-            <div className="bg-white p-8 rounded-sm shadow-sm border border-stone-200">
-              <h3 className="text-xl font-serif mb-4">Good to Know</h3>
-              <ul className="space-y-4 text-stone-600 font-light">
-                <li className="flex gap-3">
-                  <span className="text-stone-400">👗</span>
-                  <div>
-                    <p className="font-medium text-stone-800">Dress Code</p>
-                    <p className="text-sm">{WEDDING_DATA.dressCode}</p>
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-stone-400">🎁</span>
-                  <div>
-                    <p className="font-medium text-stone-800">Registry</p>
-                    <a href={WEDDING_DATA.registryLink} target="_blank" className="text-sm underline hover:text-stone-900">Visit our registry</a>
-                  </div>
-                </li>
-              </ul>
-            </div>
+    <section className="relative overflow-hidden">
+      <div className="watercolour-sheet py-24 px-6 md:px-12 border border-stone-200 rounded-sm shadow-xl">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="section-title mb-4">{t.celebration}</h2>
+            <div className="h-px w-24 bg-terracotta mx-auto mt-6" />
           </div>
 
-          {/* Schedule */}
-          <div className="bg-stone-50 p-10 rounded-sm shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <svg width="200" height="200" viewBox="0 0 100 100" className="fill-stone-900">
-                <path d="M50 0 L100 50 L50 100 L0 50 Z" />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-serif mb-8 text-center italic">Event Schedule</h3>
-            <div className="space-y-8 relative">
-              {WEDDING_DATA.schedule.map((item, index) => (
-                <div key={index} className="flex gap-6 group">
-                  <div className="text-right w-24 shrink-0 font-serif text-stone-400 italic">
+          <div className="max-w-2xl mx-auto">
+            <div className="space-y-12">
+              {data.schedule.map((item, index) => (
+                <div key={index} className="flex gap-6 md:gap-12 group">
+                  <div className="text-right w-20 md:w-24 shrink-0 label-text pt-2 opacity-60">
                     {item.time}
                   </div>
                   <div className="relative">
-                    <div className="w-2 h-2 rounded-full bg-stone-300 mt-2" />
-                    {index !== WEDDING_DATA.schedule.length - 1 && (
-                      <div className="absolute top-4 left-[3px] w-[1px] h-full bg-stone-200" />
+                    <div className="w-3 h-3 rounded-full bg-terracotta mt-2 shadow-sm transition-transform group-hover:scale-125" />
+                    {index !== data.schedule.length - 1 && (
+                      <div className="absolute top-6 left-[5px] w-[2px] h-full bg-terracotta opacity-10" />
                     )}
                   </div>
-                  <div>
-                    <p className="font-bold text-stone-800 group-hover:text-stone-600 transition-colors">{item.event}</p>
-                    <p className="text-sm text-stone-500 font-light">{item.description}</p>
+                  <div className="flex-1">
+                    <p className="font-titles text-3xl md:text-4xl text-stone-800 mb-1 group-hover:text-terracotta transition-colors leading-tight">
+                      {item.event}
+                    </p>
+                    <p className="body-text !text-stone-500 text-sm">
+                      {item.description}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+          
+          <div className="mt-24 text-center">
+            <p className="label-text mb-4">{t.attire}</p>
+            <button 
+              onClick={onDressCodeClick}
+              className="text-stone-800 font-titles text-2xl border-b border-terracotta hover:text-terracotta transition-colors"
+            >
+              {t.viewDressCode}
+            </button>
           </div>
         </div>
       </div>

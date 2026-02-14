@@ -1,74 +1,77 @@
 
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { WEDDING_DATA } from "../constants";
+import { Language } from "../types";
 
-// Using Gemini 2.5 Flash as it supports Maps Grounding tools
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Initialize with named parameter apiKey from process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const SYSTEM_INSTRUCTION = `
-You are the "Wedding Concierge" for ${WEDDING_DATA.coupleNames}. 
+const getSystemInstruction = (lang: Language) => {
+  const data = WEDDING_DATA[lang];
+  return `
+You are the "Wedding Concierge" for ${data.coupleNames}. 
 Your goal is to help guests with questions about the wedding in a friendly, helpful, and elegant tone.
+Current Language: ${lang === 'en' ? 'English' : 'Russian'}. 
+Please respond to the user in the language they use, but default to ${lang === 'en' ? 'English' : 'Russian'} if ambiguous.
 
 WEDDING DETAILS:
-- Couple: ${WEDDING_DATA.coupleNames}
-- Date: ${WEDDING_DATA.date}
-- Time: ${WEDDING_DATA.time}
-- Ceremony: ${WEDDING_DATA.location} at ${WEDDING_DATA.address}
-- Reception: ${WEDDING_DATA.receptionLocation} at ${WEDDING_DATA.receptionAddress}
-- Dress Code: ${WEDDING_DATA.dressCode}
-- RSVP Deadline: ${WEDDING_DATA.rsvpDeadline}
-- Registry: ${WEDDING_DATA.registryLink}
-- Schedule: ${WEDDING_DATA.schedule.map(s => `${s.time}: ${s.event} - ${s.description}`).join('\n')}
+- Couple: ${data.coupleNames}
+- Date: ${data.date}
+- Time: ${data.time}
+- Ceremony: ${data.location} at ${data.address}
+- Reception: ${data.receptionLocation} at ${data.receptionAddress}
+- Dress Code: ${data.dressCode}
+- RSVP Deadline: ${data.rsvpDeadline}
+- Registry: ${data.registryLink}
+- Schedule: ${data.schedule.map(s => `${s.time}: ${s.event} - ${s.description}`).join('\n')}
 
-When guests ask about locations, travel, or nearby amenities, use the Google Maps tool to provide accurate information. 
-If Google Maps or Search is used, always mention the source or provide helpful context.
-If you don't know an answer, suggest they contact the Maid of Honor, Sarah.
+When guests ask about locations, travel, or nearby amenities, use the Google Maps tool. 
+If you don't know an answer, suggest they contact Valeriya.
 Keep responses concise and warm.
 `;
+}
 
 export class GeminiService {
-  private chat: Chat;
+  private chats: Map<Language, Chat> = new Map();
 
-  constructor() {
-    this.chat = ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        tools: [{ googleMaps: {} }, { googleSearch: {} }],
-      },
-    });
+  private getChat(lang: Language): Chat {
+    if (!this.chats.has(lang)) {
+      // Maps grounding is only supported in Gemini 2.5 series models.
+      // Use 'gemini-2.5-flash' for efficient and grounded responses.
+      const chat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+          systemInstruction: getSystemInstruction(lang),
+          // tools: googleMaps may be used with googleSearch
+          tools: [{ googleMaps: {} }, { googleSearch: {} }],
+          // Include user location for more relevant grounding results
+          toolConfig: {
+            retrievalConfig: {
+              latLng: {
+                latitude: 43.1555,
+                longitude: 19.1226
+              }
+            }
+          }
+        },
+      });
+      this.chats.set(lang, chat);
+    }
+    return this.chats.get(lang)!;
   }
 
-  async sendMessage(message: string): Promise<string> {
+  async sendMessage(message: string, lang: Language): Promise<string> {
     try {
-      // Get current location if available for better mapping context
-      let latLng = undefined;
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
-        });
-        latLng = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        };
-      } catch (e) {
-        console.debug("Location not available for grounding context");
-      }
-
-      const result: GenerateContentResponse = await this.chat.sendMessage({ 
-        message,
-        // Optional tool config for better map results
-        ...(latLng && {
-          toolConfig: {
-            retrievalConfig: { latLng }
-          }
-        })
-      } as any);
-
-      let responseText = result.text || "I'm sorry, I'm having a bit of trouble responding right now.";
+      const chat = this.getChat(lang);
+      // chat.sendMessage only accepts the message parameter
+      const result: GenerateContentResponse = await chat.sendMessage({ message });
+      // Access the extracted string directly via the .text property
+      const responseText = result.text || (lang === 'en' ? "I'm sorry, I'm having a bit of trouble responding right now." : "Извините, у меня возникли трудности с ответом.");
+      let finalResponse = responseText;
       
-      // Append grounding links if they exist
-      const chunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      // Extract grounding links and list them if available
+      const groundingMetadata = result.candidates?.[0]?.groundingMetadata;
+      const chunks = groundingMetadata?.groundingChunks;
       if (chunks && chunks.length > 0) {
         const links = chunks
           .map((chunk: any) => {
@@ -79,14 +82,14 @@ export class GeminiService {
           .filter(Boolean);
         
         if (links.length > 0) {
-          responseText += "\n\nSources & Locations:\n" + links.join("\n");
+          finalResponse += "\n\n" + (lang === 'en' ? "Sources & Locations:" : "Источники и локации:") + "\n" + links.join("\n");
         }
       }
 
-      return responseText;
+      return finalResponse;
     } catch (error) {
       console.error("Gemini Error:", error);
-      return "I seem to be offline. Please try again in a moment!";
+      return lang === 'en' ? "I seem to be offline. Please try again in a moment!" : "Кажется, я оффлайн. Пожалуйста, попробуйте позже!";
     }
   }
 }
